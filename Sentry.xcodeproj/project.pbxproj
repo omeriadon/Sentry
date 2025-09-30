@@ -6,8 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A70B3B462E8C137400D24904 /* Sentry.icon in Resources */ = {isa = PBXBuildFile; fileRef = A70B3B452E8C137400D24904 /* Sentry.icon */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
-		A70B3B332E8BE9C600D24904 /* Sentry.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sentry.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A70B3B452E8C137400D24904 /* Sentry.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = Sentry.icon; sourceTree = "<group>"; };
+		A70B3B472E8C1BA100D24904 /* Sentry.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sentry.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -33,16 +38,9 @@
 			isa = PBXGroup;
 			children = (
 				A70B3B352E8BE9C600D24904 /* Sentry */,
-				A70B3B342E8BE9C600D24904 /* Products */,
+				A70B3B452E8C137400D24904 /* Sentry.icon */,
+				A70B3B472E8C1BA100D24904 /* Sentry.app */,
 			);
-			sourceTree = "<group>";
-		};
-		A70B3B342E8BE9C600D24904 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				A70B3B332E8BE9C600D24904 /* Sentry.app */,
-			);
-			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -67,7 +65,7 @@
 			packageProductDependencies = (
 			);
 			productName = Sentry;
-			productReference = A70B3B332E8BE9C600D24904 /* Sentry.app */;
+			productReference = A70B3B472E8C1BA100D24904 /* Sentry.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -95,7 +93,7 @@
 			mainGroup = A70B3B2A2E8BE9C600D24904;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = A70B3B342E8BE9C600D24904 /* Products */;
+			productRefGroup = A70B3B2A2E8BE9C600D24904;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -109,6 +107,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A70B3B462E8C137400D24904 /* Sentry.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -244,8 +243,9 @@
 		A70B3B3F2E8BE9C700D24904 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = Sentry;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = C2HN547N49;
@@ -288,8 +288,9 @@
 		A70B3B402E8BE9C700D24904 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = Sentry;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = C2HN547N49;
