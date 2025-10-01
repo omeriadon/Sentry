@@ -43,6 +43,21 @@ struct ContentView: View {
 	@State var addPins = false
 	@State private var currentDetent: PresentationDetent = .height(80)
 
+	var normalizedCorners: (topLeft: CLLocationCoordinate2D, bottomRight: CLLocationCoordinate2D)? {
+		guard let tl = selectedCorners.topLeft, let br = selectedCorners.bottomRight else {
+			return nil
+		}
+		let top = max(tl.latitude, br.latitude)
+		let bottom = min(tl.latitude, br.latitude)
+		let left = min(tl.longitude, br.longitude)
+		let right = max(tl.longitude, br.longitude)
+
+		return (
+			topLeft: CLLocationCoordinate2D(latitude: top, longitude: left),
+			bottomRight: CLLocationCoordinate2D(latitude: bottom, longitude: right)
+		)
+	}
+
 	var body: some View {
 		Group {
 			if useNavSplitView {
@@ -83,10 +98,7 @@ struct ContentView: View {
 					UserAnnotation()
 
 					if let topLeft = selectedCorners.topLeft {
-						Annotation(
-							"Top Left",
-							coordinate: topLeft
-						) {
+						Annotation("Top Left", coordinate: topLeft) {
 							Image(systemName: "chevron.up")
 								.imageScale(.large)
 								.padding(7)
@@ -97,10 +109,7 @@ struct ContentView: View {
 					}
 
 					if let bottomRight = selectedCorners.bottomRight {
-						Annotation(
-							"Bottom Right",
-							coordinate: bottomRight
-						) {
+						Annotation("Bottom Right", coordinate: bottomRight) {
 							Image(systemName: "chevron.up")
 								.imageScale(.large)
 								.padding(7)
@@ -109,29 +118,19 @@ struct ContentView: View {
 						}
 						.annotationTitles(.hidden)
 					}
-					
-					if let topLeft = selectedCorners.topLeft, let bottomRight = selectedCorners.bottomRight {
-						let minLat = min(topLeft.latitude, bottomRight.latitude)
-						let maxLat = max(topLeft.latitude, bottomRight.latitude)
-						let minLon = min(topLeft.longitude, bottomRight.longitude)
-						let maxLon = max(topLeft.longitude, bottomRight.longitude)
 
+					if let corners = normalizedCorners {
 						let path: [CLLocationCoordinate2D] = [
-							CLLocationCoordinate2D(latitude: maxLat, longitude: minLon), // top-left
-							CLLocationCoordinate2D(latitude: maxLat, longitude: maxLon), // top-right
-							CLLocationCoordinate2D(latitude: minLat, longitude: maxLon), // bottom-right
-							CLLocationCoordinate2D(latitude: minLat, longitude: minLon), // bottom-left
+							corners.topLeft,
+							CLLocationCoordinate2D(latitude: corners.topLeft.latitude, longitude: corners.bottomRight.longitude),
+							corners.bottomRight,
+							CLLocationCoordinate2D(latitude: corners.bottomRight.latitude, longitude: corners.topLeft.longitude),
 						]
 
 						MapPolygon(coordinates: path)
 							.foregroundStyle(.orange.opacity(0.2))
 							.stroke(Color.white, lineWidth: 2)
-							.strokeStyle(
-								style: .init(
-									lineCap: .round,
-									lineJoin: .round
-								)
-							)
+							.strokeStyle(style: .init(lineCap: .round, lineJoin: .round))
 					}
 				}
 				.onTapGesture { position in
