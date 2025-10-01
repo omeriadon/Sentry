@@ -97,28 +97,6 @@ struct ContentView: View {
 				) {
 					UserAnnotation()
 
-					if let topLeft = selectedCorners.topLeft {
-						Annotation("Top Left", coordinate: topLeft) {
-							Image(systemName: "chevron.up")
-								.imageScale(.large)
-								.padding(7)
-								.rotationEffect(Angle(degrees: -45))
-								.glassEffect(.regular.tint(.orange), in: .circle)
-						}
-						.annotationTitles(.hidden)
-					}
-
-					if let bottomRight = selectedCorners.bottomRight {
-						Annotation("Bottom Right", coordinate: bottomRight) {
-							Image(systemName: "chevron.up")
-								.imageScale(.large)
-								.padding(7)
-								.rotationEffect(Angle(degrees: 135))
-								.glassEffect(.regular.tint(.orange), in: .circle)
-						}
-						.annotationTitles(.hidden)
-					}
-
 					if let corners = normalizedCorners {
 						let path: [CLLocationCoordinate2D] = [
 							corners.topLeft,
@@ -131,6 +109,47 @@ struct ContentView: View {
 							.foregroundStyle(.orange.opacity(0.2))
 							.stroke(Color.white, lineWidth: 2)
 							.strokeStyle(style: .init(lineCap: .round, lineJoin: .round))
+
+						// Draw annotations using normalized positions
+						let cornerAnnotations: [(CLLocationCoordinate2D, String, Double)] = [
+							(corners.topLeft, "Top Left", -45),
+							(CLLocationCoordinate2D(latitude: corners.topLeft.latitude, longitude: corners.bottomRight.longitude), "Top Right", 45),
+							(corners.bottomRight, "Bottom Right", 135),
+							(CLLocationCoordinate2D(latitude: corners.bottomRight.latitude, longitude: corners.topLeft.longitude), "Bottom Left", -135),
+						]
+
+						ForEach(cornerAnnotations, id: \.1) { coord, name, rotation in
+							Annotation(name, coordinate: coord) {
+								Image(systemName: "chevron.up")
+									.imageScale(.large)
+									.padding(7)
+									.rotationEffect(Angle(degrees: rotation))
+									.glassEffect(.regular.tint(.orange), in: .circle)
+							}
+							.annotationTitles(.hidden)
+						}
+					} else {
+						// Preview individual selected corners before both are set
+						if let topLeft = selectedCorners.topLeft {
+							Annotation("Top Left?", coordinate: topLeft) {
+								Image(systemName: "chevron.up")
+									.imageScale(.large)
+									.padding(7)
+									.rotationEffect(Angle(degrees: -45))
+									.glassEffect(.regular.tint(.orange), in: .circle)
+							}
+							.annotationTitles(.hidden)
+						}
+						if let bottomRight = selectedCorners.bottomRight {
+							Annotation("Bottom Right?", coordinate: bottomRight) {
+								Image(systemName: "chevron.up")
+									.imageScale(.large)
+									.padding(7)
+									.rotationEffect(Angle(degrees: 135))
+									.glassEffect(.regular.tint(.orange), in: .circle)
+							}
+							.annotationTitles(.hidden)
+						}
 					}
 				}
 				.onTapGesture { position in
@@ -192,18 +211,18 @@ struct ContentView: View {
 	var sideView: some View {
 		Group {
 			if selectedCorners.topLeft == nil {
-				Label("Tap top-left corner of the rectangle",
-				      systemImage: "square.grid.3x3.topleft.filled")
+				Label("Tap corner of the rectangle",
+				      systemImage: "circle.grid.cross.left.filled")
 					.transition(.blurReplace)
 
 			} else if selectedCorners.bottomRight == nil {
-				Label("Tap bottom-right corner of the rectangle",
-				      systemImage: "square.grid.3x3.bottomright.filled")
+				Label("Tap opposite corner of the rectangle",
+				      systemImage: "circle.grid.cross.right.filled")
 					.transition(.blurReplace)
 
 			} else {
 				Label(
-					"Rectangle defined, you can adjust corners by tapping again",
+					"Rectangle defined, you can adjust by tapping again",
 					systemImage: "checkmark.circle"
 				)
 				.transition(.blurReplace)
