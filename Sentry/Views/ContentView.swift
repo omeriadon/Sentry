@@ -24,8 +24,7 @@ struct ContentView: View {
 		#else
 			switch UIDevice.current.userInterfaceIdiom {
 			case .pad:
-				// Horizontal = regular width, compact height
-				return hSize == .regular /* && vSize == .compact*/
+				return hSize == .regular
 			case .phone:
 				return false
 			default:
@@ -35,18 +34,14 @@ struct ContentView: View {
 	}
 
 	@State var isSheetPresented = true
-
 	@State var position: MapCameraPosition = .userLocation(fallback: .automatic)
-
 	@Namespace var mapScope
-
 	@State var locations: [Location] = []
 
-	@State var selectedLocation: MKMapItem?
-
+	// Rectangle corners
+	@State var selectedCorners: (topLeft: CLLocationCoordinate2D?, bottomRight: CLLocationCoordinate2D?) = (nil, nil)
 	@State var addPins = false
-
-	@State private var currentDetent: PresentationDetent = .medium
+	@State private var currentDetent: PresentationDetent = .height(80)
 
 	var body: some View {
 		Group {
@@ -80,65 +75,76 @@ struct ContentView: View {
 	var mapView: some View {
 		NavigationStack {
 			MapReader { proxy in
-				if addPins {
-					Map(
-						position: $position,
-						interactionModes: [.pan, .rotate, .zoom],
-						scope: mapScope
-					) {
-						UserAnnotation()
+				Map(
+					position: $position,
+					interactionModes: [.pan, .rotate, .zoom],
+					scope: mapScope
+				) {
+					UserAnnotation()
 
-						ForEach(locations) { location in
-							Marker(location.name, coordinate: location.coordinate)
-								.tag(
-									MKMapItem(
-										location: CLLocation(
-											latitude: location.coordinate.latitude,
-											longitude: location.coordinate.longitude
-										),
-										address: nil
-									)
-								)
-						}
-						.annotationTitles(.hidden)
-					}
-					.onTapGesture { position in
-						if addPins {
-							if let coordinate = proxy.convert(position, from: .local) {
-								let item = Location(
-									name: coordinate.animatableData.first.description,
-									coordinate: coordinate
-								)
+					// Draw rectangle polygon if both corners exist
+					if let topLeft = selectedCorners.topLeft, let bottomRight = selectedCorners.bottomRight {
+						let minLat = min(topLeft.latitude, bottomRight.latitude)
+						let maxLat = max(topLeft.latitude, bottomRight.latitude)
+						let minLon = min(topLeft.longitude, bottomRight.longitude)
+						let maxLon = max(topLeft.longitude, bottomRight.longitude)
 
-								locations.append(item)
+						let path: [CLLocationCoordinate2D] = [
+							CLLocationCoordinate2D(latitude: maxLat, longitude: minLon), // top-left
+							CLLocationCoordinate2D(latitude: maxLat, longitude: maxLon), // top-right
+							CLLocationCoordinate2D(latitude: minLat, longitude: maxLon), // bottom-right
+							CLLocationCoordinate2D(latitude: minLat, longitude: minLon), // bottom-left
+						]
+
+						if let topLeft = selectedCorners.0 {
+							Annotation(
+								"Top Left",
+								coordinate: topLeft
+							) {
+								Image(systemName: "chevron.up")
+									.imageScale(.large)
+									.padding(7)
+									.rotationEffect(Angle(degrees: -45))
+									.glassEffect(.regular.tint(.orange), in: .circle)
 							}
+							.annotationTitles(.hidden)
 						}
-					}
-					.transition(.opacity)
-				} else {
-					Map(
-						position: $position,
-						interactionModes: [.pan, .rotate, .zoom],
-						selection: $selectedLocation,
-						scope: mapScope
-					) {
-						UserAnnotation()
 
-						ForEach(locations) { location in
-							Marker(location.name, coordinate: location.coordinate)
-								.tag(
-									MKMapItem(
-										location: CLLocation(
-											latitude: location.coordinate.latitude,
-											longitude: location.coordinate.longitude
-										),
-										address: nil
-									)
-								)
+						if let bottomRight = selectedCorners.1 {
+							Annotation(
+								"Bottom Right",
+								coordinate: bottomRight
+							) {
+								Image(systemName: "chevron.up")
+									.imageScale(.large)
+									.padding(7)
+									.rotationEffect(Angle(degrees: 135))
+									.glassEffect(.regular.tint(.orange), in: .circle)
+							}
+							.annotationTitles(.hidden)
 						}
-						.annotationTitles(.hidden)
+
+						MapPolygon(coordinates: path)
+							.foregroundStyle(.orange.opacity(0.2))
+							.stroke(Color.white, lineWidth: 2)
+							.strokeStyle(
+								style: .init(
+									lineCap: .round,
+									lineJoin: .round
+								)
+							)
 					}
-					.transition(.opacity)
+				}
+				.onTapGesture { position in
+					if addPins, let coordinate = proxy.convert(position, from: .local) {
+						if selectedCorners.topLeft == nil {
+							selectedCorners.topLeft = coordinate
+						} else if selectedCorners.bottomRight == nil {
+							selectedCorners.bottomRight = coordinate
+						} else {
+							selectedCorners = (coordinate, nil)
+						}
+					}
 				}
 			}
 			.animation(.easeInOut(duration: 0.3), value: addPins)
@@ -186,38 +192,44 @@ struct ContentView: View {
 	}
 
 	var sideView: some View {
-		NavigationStack {
-			List {
-				if locations.isEmpty {
-					Text("Add a location to get started.")
-						.listRowBackground(Color.clear.background(.ultraThinMaterial))
-				} else {
-					ForEach(locations) { location in
-						Button {
-							withAnimation {
-								selectedLocation =
-									MKMapItem(
-										location: CLLocation(
-											latitude: location.coordinate.latitude,
-											longitude: location.coordinate.longitude
-										),
-										address: nil
-									)
-							}
-						} label: {
-							Text(location.name)
-						}
-						.listRowBackground(Color.clear.background(.ultraThinMaterial))
-					}
-				}
+		Group {
+			if selectedCorners.topLeft == nil {
+				Label("Tap top-left corner of the rectangle",
+				      systemImage: "square.grid.3x3.topleft.filled")
+					.transition(.blurReplace)
+
+			} else if selectedCorners.bottomRight == nil {
+				Label("Tap bottom-right corner of the rectangle",
+				      systemImage: "square.grid.3x3.bottomright.filled")
+					.transition(.blurReplace)
+
+			} else {
+				Label(
+					"Rectangle defined, you can adjust corners by tapping again",
+					systemImage: "checkmark.circle"
+				)
+				.transition(.blurReplace)
 			}
-			.listStyle(.sidebar)
-			.scrollContentBackground(.hidden)
-			.background(.clear)
 		}
+		.animation(
+			.easeInOut,
+			value: CornerPair(topLeft: selectedCorners.topLeft, bottomRight: selectedCorners.bottomRight)
+		)
 	}
 }
 
 #Preview {
 	ContentView()
+}
+
+struct CornerPair: Equatable {
+	let topLeft: CLLocationCoordinate2D?
+	let bottomRight: CLLocationCoordinate2D?
+
+	static func == (lhs: CornerPair, rhs: CornerPair) -> Bool {
+		lhs.topLeft?.latitude == rhs.topLeft?.latitude &&
+			lhs.topLeft?.longitude == rhs.topLeft?.longitude &&
+			lhs.bottomRight?.latitude == rhs.bottomRight?.latitude &&
+			lhs.bottomRight?.longitude == rhs.bottomRight?.longitude
+	}
 }
