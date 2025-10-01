@@ -82,7 +82,34 @@ struct ContentView: View {
 				) {
 					UserAnnotation()
 
-					// Draw rectangle polygon if both corners exist
+					if let topLeft = selectedCorners.topLeft {
+						Annotation(
+							"Top Left",
+							coordinate: topLeft
+						) {
+							Image(systemName: "chevron.up")
+								.imageScale(.large)
+								.padding(7)
+								.rotationEffect(Angle(degrees: -45))
+								.glassEffect(.regular.tint(.orange), in: .circle)
+						}
+						.annotationTitles(.hidden)
+					}
+
+					if let bottomRight = selectedCorners.bottomRight {
+						Annotation(
+							"Bottom Right",
+							coordinate: bottomRight
+						) {
+							Image(systemName: "chevron.up")
+								.imageScale(.large)
+								.padding(7)
+								.rotationEffect(Angle(degrees: 135))
+								.glassEffect(.regular.tint(.orange), in: .circle)
+						}
+						.annotationTitles(.hidden)
+					}
+					
 					if let topLeft = selectedCorners.topLeft, let bottomRight = selectedCorners.bottomRight {
 						let minLat = min(topLeft.latitude, bottomRight.latitude)
 						let maxLat = max(topLeft.latitude, bottomRight.latitude)
@@ -95,34 +122,6 @@ struct ContentView: View {
 							CLLocationCoordinate2D(latitude: minLat, longitude: maxLon), // bottom-right
 							CLLocationCoordinate2D(latitude: minLat, longitude: minLon), // bottom-left
 						]
-
-						if let topLeft = selectedCorners.0 {
-							Annotation(
-								"Top Left",
-								coordinate: topLeft
-							) {
-								Image(systemName: "chevron.up")
-									.imageScale(.large)
-									.padding(7)
-									.rotationEffect(Angle(degrees: -45))
-									.glassEffect(.regular.tint(.orange), in: .circle)
-							}
-							.annotationTitles(.hidden)
-						}
-
-						if let bottomRight = selectedCorners.1 {
-							Annotation(
-								"Bottom Right",
-								coordinate: bottomRight
-							) {
-								Image(systemName: "chevron.up")
-									.imageScale(.large)
-									.padding(7)
-									.rotationEffect(Angle(degrees: 135))
-									.glassEffect(.regular.tint(.orange), in: .circle)
-							}
-							.annotationTitles(.hidden)
-						}
 
 						MapPolygon(coordinates: path)
 							.foregroundStyle(.orange.opacity(0.2))
