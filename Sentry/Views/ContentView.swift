@@ -63,26 +63,24 @@ struct ContentView: View {
 			if useNavSplitView {
 				NavigationSplitView {
 					sideView
-						.navigationSplitViewColumnWidth(min: 300, ideal: 400, max: 500)
+						.navigationSplitViewColumnWidth(min: 230, ideal: 350, max: 500)
 				} detail: {
 					mapView
 				}
 
 			} else {
-				ZStack {
-					mapView
-						.sheet(isPresented: $isSheetPresented) {
-							sideView
-								.padding()
-								.presentationDetents(
-									[.height(80), .fraction(0.35), .medium],
-									selection: $currentDetent
-								)
-								.presentationBackgroundInteraction(.enabled)
-								.presentationDragIndicator(.visible)
-								.interactiveDismissDisabled()
-						}
-				}
+				mapView
+					.sheet(isPresented: $isSheetPresented) {
+						sideView
+							.padding()
+							.presentationDetents(
+								[.height(80), .fraction(0.35), .medium],
+								selection: $currentDetent
+							)
+							.presentationBackgroundInteraction(.enabled)
+							.presentationDragIndicator(.visible)
+							.interactiveDismissDisabled()
+					}
 			}
 		}
 	}
@@ -92,7 +90,7 @@ struct ContentView: View {
 			MapReader { proxy in
 				Map(
 					position: $position,
-					interactionModes: [.pan, .rotate, .zoom],
+					interactionModes: [.pan, .zoom],
 					scope: mapScope
 				) {
 					UserAnnotation()
@@ -129,7 +127,6 @@ struct ContentView: View {
 							.annotationTitles(.hidden)
 						}
 					} else {
-						// Preview individual selected corners before both are set
 						if let topLeft = selectedCorners.topLeft {
 							Annotation("Top Left?", coordinate: topLeft) {
 								Image(systemName: "chevron.up")
@@ -151,9 +148,13 @@ struct ContentView: View {
 							.annotationTitles(.hidden)
 						}
 					}
+
 				}
-				.onTapGesture { position in
-					if addPins, let coordinate = proxy.convert(position, from: .local) {
+				.onTapGesture(coordinateSpace: .local) { location in
+					if addPins, let coordinate = proxy.convert(
+						location,
+						from: .local
+					) {
 						if selectedCorners.topLeft == nil {
 							selectedCorners.topLeft = coordinate
 						} else if selectedCorners.bottomRight == nil {
@@ -165,46 +166,46 @@ struct ContentView: View {
 				}
 			}
 			.animation(.easeInOut(duration: 0.3), value: addPins)
-			#if os(iOS)
-				.navigationBarTitleDisplayMode(.inline)
-			#endif
-				.navigationTitle("Sentry")
-				.toolbar {
-					ToolbarItem {
-						Button {} label: {
-							Label("Settings", systemImage: "gear")
-						}
-					}
-
-					ToolbarSpacer(.fixed)
-					ToolbarItem {
-						Button {
-							withAnimation {
-								addPins.toggle()
-							}
-						} label: {
-							Label(addPins ? "Done" : "Add Pins", systemImage: addPins ? "checkmark" : "plus")
-								.contentTransition(.numericText())
-						}
+			.toolbarBackground(.clear)
+			.navigationTitle("")
+			.toolbar {
+				ToolbarItem(placement: .navigation) {
+					Button {} label: {
+						Label("Settings", systemImage: "gear")
 					}
 				}
-				.mapControlVisibility(.visible)
-				.mapStyle(
-					.hybrid(
-						elevation: .flat,
-						pointsOfInterest: .including([]),
-						showsTraffic: false
-					)
+
+				ToolbarSpacer(.fixed)
+				ToolbarItem(placement: .primaryAction) {
+					Button {
+						withAnimation {
+							addPins.toggle()
+						}
+					} label: {
+						Label(addPins ? "Done" : "Add Pins", systemImage: addPins ? "checkmark" : "plus")
+							.contentTransition(.numericText())
+					}
+				}
+			}
+			.mapControlVisibility(.visible)
+			.mapStyle(
+				.hybrid(
+					elevation: .realistic,
+					pointsOfInterest: .including([]),
+					showsTraffic: false
 				)
-				.mapControls {
-					MapUserLocationButton()
-					MapCompass()
-					MapScaleView()
+			)
+			.mapControls {
+				Spacer()
 
-					#if os(macOS)
-						MapZoomStepper()
-					#endif
-				}
+				MapUserLocationButton()
+				MapCompass()
+				MapScaleView()
+
+				#if os(macOS)
+					MapZoomStepper()
+				#endif
+			}
 		}
 	}
 
