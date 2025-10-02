@@ -9,13 +9,44 @@
           "fill" : {
             "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
           },
+          "glass" : false,
+          "hidden" : false,
+          "image-name" : "ok2.png",
+          "name" : "ok2",
+          "position" : {
+            "scale" : 0.04,
+            "translation-in-points" : [
+              -30,
+              23
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
+          },
+          "hidden" : false,
+          "image-name" : "ok2.png",
+          "name" : "ok2",
+          "position" : {
+            "scale" : 0.08,
+            "translation-in-points" : [
+              -22,
+              15
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
+          },
           "image-name" : "ok2.png",
           "name" : "ok2",
           "position" : {
             "scale" : 0.12,
             "translation-in-points" : [
-              -10.8378645833333,
-              5.03875000000005
+              -9,
+              2.760517083559682
             ]
           }
         },
