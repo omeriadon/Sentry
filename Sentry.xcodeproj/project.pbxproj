@@ -8,11 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		A70B3B462E8C137400D24904 /* Sentry.icon in Resources */ = {isa = PBXBuildFile; fileRef = A70B3B452E8C137400D24904 /* Sentry.icon */; };
+		A785306B2E8F58C1002615D8 /* wildifre predicter.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = A785306A2E8F58C1002615D8 /* wildifre predicter.mlpackage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		A70B3B452E8C137400D24904 /* Sentry.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = Sentry.icon; sourceTree = "<group>"; };
 		A70B3B472E8C1BA100D24904 /* Sentry.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sentry.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A785306A2E8F58C1002615D8 /* wildifre predicter.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = "wildifre predicter.mlpackage"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -37,6 +39,7 @@
 		A70B3B2A2E8BE9C600D24904 = {
 			isa = PBXGroup;
 			children = (
+				A785306A2E8F58C1002615D8 /* wildifre predicter.mlpackage */,
 				A70B3B352E8BE9C600D24904 /* Sentry */,
 				A70B3B452E8C137400D24904 /* Sentry.icon */,
 				A70B3B472E8C1BA100D24904 /* Sentry.app */,
@@ -120,6 +123,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A785306B2E8F58C1002615D8 /* wildifre predicter.mlpackage in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

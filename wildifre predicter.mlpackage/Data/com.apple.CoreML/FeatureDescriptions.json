@@ -1,0 +1,27 @@
+{
+  "Inputs" : {
+    "LST" : {
+      "MLFeatureShortDescription" : "--"
+    },
+    "BURNED_AREA" : {
+      "MLFeatureShortDescription" : "--"
+    },
+    "NDVI" : {
+      "MLFeatureShortDescription" : "--"
+    }
+  },
+  "Outputs" : {
+    "CLASS" : {
+      "MLFeatureShortDescription" : "--"
+    },
+    "CLASSProbability" : {
+      "MLFeatureShortDescription" : "--"
+    }
+  },
+  "TrainingInputs" : {
+
+  },
+  "States" : {
+
+  }
+}
