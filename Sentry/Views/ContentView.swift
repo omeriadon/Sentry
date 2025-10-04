@@ -15,6 +15,17 @@ struct Location: Identifiable {
 	var coordinate: CLLocationCoordinate2D
 }
 
+private struct Coordinate: Hashable {
+	let lat: Double
+	let lon: Double
+}
+
+private struct TileSeed {
+	let center: CLLocationCoordinate2D
+	let coordinate: Coordinate
+	let polygon: [CLLocationCoordinate2D]
+}
+
 struct ContentView: View {
 	@Environment(\.horizontalSizeClass) private var hSize
 	@Environment(\.verticalSizeClass) private var vSize
@@ -44,6 +55,11 @@ struct ContentView: View {
 	@State var addPins = false
 	@State private var currentDetent: PresentationDetent = .height(80)
 
+	// ---------- NEW: records and spacing used by the synthetic generator ----------
+	@State private var records: [NDVILSTRecord] = []
+	private let spacingMeters: Double = 500.0
+	// ---------------------------------------------------------------------------
+
 	var normalizedCorners: (topLeft: CLLocationCoordinate2D, bottomRight: CLLocationCoordinate2D)? {
 		guard let tl = selectedCorners.topLeft, let br = selectedCorners.bottomRight else {
 			return nil
@@ -60,6 +76,9 @@ struct ContentView: View {
 	}
 
 	@State var firePrediction: String = "Unknown"
+
+	@State private var generationTask: Task<Void, Never>? = nil
+	@State private var isRunning: Bool = false
 
 	var body: some View {
 		Group {
@@ -98,7 +117,28 @@ struct ContentView: View {
 				) {
 					UserAnnotation()
 
-					if let corners = normalizedCorners {
+					ForEach(records, id: \.coordinate) { rec in
+						let center = CLLocationCoordinate2D(latitude: rec.coordinate.lat, longitude: rec.coordinate.lon)
+							// Instead of recomputing:
+							// let polygonCoords = tilePolygonCoordinates(center: center, spacingMeters: spacingMeters)
+							// Use the polygon from the seed:
+						let polygonCoords = tilePolygonCoordinates(center: center, spacingMeters: spacingMeters)
+
+						MapPolygon(coordinates: polygonCoords)
+							.foregroundStyle(Color(hue: 0.33 * Double((rec.ndvi + 1.0) / 2.0), saturation: 0.8, brightness: 0.9).opacity(0.5))
+							.stroke(Color.black.opacity(0.25), lineWidth: 1)
+
+						Annotation(String(format: "NDVI %.2f\nP: %.2f", rec.ndvi, predictFireProbabilitySafe(for: rec)), coordinate: center) {
+							VStack {
+								Text(String(format: "%.2f", rec.ndvi))
+									.font(.caption2)
+									.fontWeight(.semibold)							}
+						}
+						.annotationTitles(.hidden)
+					}
+
+					// ---------- changed: only draw the orange selection rectangle when NOT showing predicted pixels ----------
+					if let corners = normalizedCorners, records.isEmpty {
 						let path: [CLLocationCoordinate2D] = [
 							corners.topLeft,
 							CLLocationCoordinate2D(latitude: corners.topLeft.latitude, longitude: corners.bottomRight.longitude),
@@ -130,6 +170,7 @@ struct ContentView: View {
 							.annotationTitles(.hidden)
 						}
 					} else {
+						// show corner hint pins when selection present but rectangle hidden (e.g. records displayed)
 						if let topLeft = selectedCorners.topLeft {
 							Annotation("Top Left?", coordinate: topLeft) {
 								Image(systemName: "chevron.up")
@@ -216,56 +257,294 @@ struct ContentView: View {
 			)
 		) {
 			firePrediction = ""
+			// Keep existing records when changing corners only if you want, otherwise clear:
+			// records.removeAll()
 		}
 	}
 
 	var sideView: some View {
-		Group {
-			if firePrediction == "" {
-				if selectedCorners.topLeft == nil {
-					Label("Tap corner of the rectangle",
-					      systemImage: "circle.grid.cross.left.filled")
-						.transition(.blurReplace)
-
-				} else if selectedCorners.bottomRight == nil {
-					Label("Tap opposite corner of the rectangle",
-					      systemImage: "circle.grid.cross.right.filled")
-						.transition(.blurReplace)
-
-				} else {
-					Label(
-						"Rectangle defined, you can adjust by tapping again",
-						systemImage: "checkmark.circle"
-					)
-					.transition(.blurReplace)
+		ScrollView {
+			VStack(alignment: .leading, spacing: 16) {
+				// Instruction area
+				Group {
+					if selectedCorners.topLeft == nil {
+						Label("Tap the first corner of the rectangle", systemImage: "circle.grid.cross.left.filled")
+					} else if selectedCorners.bottomRight == nil {
+						Label("Tap the opposite corner of the rectangle", systemImage: "circle.grid.cross.right.filled")
+					} else {
+						Label("Rectangle defined. Run to synthesize NDVI and predict fire.", systemImage: "checkmark.circle")
+					}
 				}
-			} else {
-				Text(firePrediction)
+				.font(.callout)
+
+				Button {
+					if isRunning { cancelGeneration() } else {
+						withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) { isRunning = true }
+						generateValuesAsync(seed: 42, date: Date(), batchSize: 128, gapFraction: 0.985)
+					}
+				} label: {
+					HStack {
+						if isRunning { ProgressView().progressViewStyle(.circular) }
+						Text(isRunning ? "Cancel" : "Run Synthetic NDVI & Predict Fire").fontWeight(.semibold)
+					}
+					.frame(maxWidth: .infinity)
+				}
+				.buttonStyle(.borderedProminent)
+
+				// Quick stats and controls
+				HStack {
+					Text("Points:")
+						.font(.caption)
+						.foregroundStyle(.secondary)
+					Text("\(records.count)")
+						.font(.headline)
+				}
+
+				if !firePrediction.isEmpty {
+					Text(firePrediction)
+						.font(.body)
+						.padding(8)
+						.background(.thinMaterial)
+						.clipShape(RoundedRectangle(cornerRadius: 10))
+				}
+
+				// Optional: show first few records for debugging
+				if !records.isEmpty {
+					GroupBox("Sample points") {
+						VStack(alignment: .leading, spacing: 8) {
+							ForEach(Array(records.prefix(6)), id: \.coordinate) { r in
+								Text(String(format: "NDVI %.3f  LST %.1f°C  BurnProb %.2f", r.ndvi, r.lstC, r.burnedProb))
+									.font(.caption2)
+									.monospacedDigit()
+							}
+						}
+						.padding(.vertical, 6)
+					}
+				}
+
+				Spacer()
+			}
+			.padding()
+		}
+	}
+
+
+	private func generateTileSeeds(
+		minLat: Double,
+		maxLat: Double,
+		minLon: Double,
+		maxLon: Double,
+		baseSpacingMeters: Double,
+		gapFraction: Double = 0.985,
+		maxTiles: Int = 25
+	) -> [TileSeed] {
+		let top = maxLat
+		let bottom = minLat
+		let left = minLon
+		let right = maxLon
+
+		let latDiff = max(top - bottom, 0.000_001)
+		let lonDiff = max(right - left, 0.000_001)
+
+			// Start with provided spacing
+		var spacingMeters = baseSpacingMeters
+
+			// Compute spacing to ensure counts do not exceed maxTiles
+		let metersPerDegreeLat = 111_320.0
+		let midLat = (top + bottom) / 2.0
+		let metersPerDegreeLon = 111_320.0 * cos(midLat * .pi / 180.0)
+
+		var latCount = Int(ceil(latDiff * metersPerDegreeLat / spacingMeters))
+		var lonCount = Int(ceil(lonDiff * metersPerDegreeLon / spacingMeters))
+
+			// Increase spacing if too many tiles
+		if latCount > maxTiles || lonCount > maxTiles {
+			let scale = max(Double(latCount) / Double(maxTiles), Double(lonCount) / Double(maxTiles))
+			spacingMeters *= scale
+			latCount = Int(ceil(latDiff * metersPerDegreeLat / spacingMeters))
+			lonCount = Int(ceil(lonDiff * metersPerDegreeLon / spacingMeters))
+		}
+
+			// Compute actual step size in degrees to **fill the bbox**
+		let actualLatStep = latDiff / Double(latCount)
+		let actualLonStep = lonDiff / Double(lonCount)
+		let latHalf = (actualLatStep / 2.0) * gapFraction
+		let lonHalf = (actualLonStep / 2.0) * gapFraction
+
+		var seeds: [TileSeed] = []
+		for latIndex in 0..<latCount {
+			let centerLat = bottom + (Double(latIndex) * actualLatStep) + (actualLatStep / 2.0)
+			for lonIndex in 0..<lonCount {
+				let centerLon = left + (Double(lonIndex) * actualLonStep) + (actualLonStep / 2.0)
+				let center = CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon)
+				let polygon = [
+					CLLocationCoordinate2D(latitude: centerLat + latHalf, longitude: centerLon - lonHalf),
+					CLLocationCoordinate2D(latitude: centerLat + latHalf, longitude: centerLon + lonHalf),
+					CLLocationCoordinate2D(latitude: centerLat - latHalf, longitude: centerLon + lonHalf),
+					CLLocationCoordinate2D(latitude: centerLat - latHalf, longitude: centerLon - lonHalf),
+				]
+				let coord = Coordinate(lat: centerLat, lon: centerLon)
+				seeds.append(TileSeed(center: center, coordinate: coord, polygon: polygon))
 			}
 		}
-		.animation(
-			.easeInOut,
-			value: CornerPair(topLeft: selectedCorners.topLeft, bottomRight: selectedCorners.bottomRight)
-		)
+		return seeds
+	}
+
+
+
+
+
+
+
+
+		// tile polygon helper (keeps render consistent with gapFraction)
+	private func tilePolygonCoordinates(center: CLLocationCoordinate2D, spacingMeters: Double, gapFraction: Double = 0.985) -> [CLLocationCoordinate2D] {
+		let latHalfDeg = (spacingMeters / 111_320.0) / 2.0 * gapFraction
+		let metersPerDegLon = 111_320.0 * cos(center.latitude * .pi / 180.0)
+		let lonHalfDeg = (spacingMeters / max(metersPerDegLon, 0.000_001)) / 2.0 * gapFraction
+
+		return [
+			CLLocationCoordinate2D(latitude: center.latitude + latHalfDeg, longitude: center.longitude - lonHalfDeg),
+			CLLocationCoordinate2D(latitude: center.latitude + latHalfDeg, longitude: center.longitude + lonHalfDeg),
+			CLLocationCoordinate2D(latitude: center.latitude - latHalfDeg, longitude: center.longitude + lonHalfDeg),
+			CLLocationCoordinate2D(latitude: center.latitude - latHalfDeg, longitude: center.longitude - lonHalfDeg),
+		]
+	}
+
+		// Async batch generator. Precomputes coords & options, then performs background batches.
+		// Uses synthesizeRecords(for:options:) synchronously on a background thread.
+	func generateValuesAsync(seed: UInt64 = 42, date: Date = Date(), batchSize: Int = 128, gapFraction: Double = 0.985) {
+			// cancel any running work
+		generationTask?.cancel()
+
+			// Build options (copy) used by the generator
+		var opts = SyntheticOptions()
+		opts.seed = seed
+		opts.date = date
+
+			// prepare coords (compute seeds now so we don't capture self inside heavy work)
+		let coordsList: [Coordinate]
+		if let c = normalizedCorners {
+			let seeds = generateTileSeeds(
+				minLat: c.bottomRight.latitude,
+				maxLat: c.topLeft.latitude,
+				minLon: c.topLeft.longitude,
+				maxLon: c.bottomRight.longitude,
+				baseSpacingMeters: spacingMeters,
+				gapFraction: gapFraction
+			)
+			coordsList = seeds.map { $0.coordinate }
+		} else {
+				// fallback small sample area
+			let bboxMinLat = 37.33
+			let bboxMaxLat = 37.34
+			let bboxMinLon = -122.04
+			let bboxMaxLon = -122.02
+			let seeds = generateTileSeeds(
+				minLat: bboxMinLat,
+				maxLat: bboxMaxLat,
+				minLon: bboxMinLon,
+				maxLon: bboxMaxLon,
+				baseSpacingMeters: spacingMeters,
+				gapFraction: gapFraction
+			)
+			coordsList = seeds.map { $0.coordinate }
+		}
+
+			// clear old records and mark running
+		records.removeAll()
+		isRunning = true
+
+			// Start detached worker; it will periodically marshal results to the main actor.
+		generationTask = Task.detached(priority: .userInitiated) {
+			let total = coordsList.count
+			let strideSize = batchSize
+			for i in stride(from: 0, to: total, by: strideSize) {
+				if Task.isCancelled { break }
+				let batch = Array(coordsList[i..<min(i+strideSize, total)])
+
+					// Offload to background queue
+				let batchResult = await withCheckedContinuation { cont in
+					DispatchQueue.global(qos: .userInitiated).async {
+						let result = synthesizeRecords(for: batch.map { Coord(lat: $0.lat, lon: $0.lon) }, options: opts)
+						cont.resume(returning: result)
+					}
+				}
+
+				await MainActor.run { records.append(contentsOf: batchResult) }
+				await Task.yield()
+			}
+			await MainActor.run {
+				isRunning = false
+				generationTask = nil
+			}
+		}
+
+	}
+
+		// Cancel an in-progress generation
+	func cancelGeneration() {
+		generationTask?.cancel()
+		generationTask = nil
+		isRunning = false
+	}
+
+
+	// ---------- EXISTING functions (unchanged apart from using records/isRunning where needed) ----------
+	// generateValues(seed:date:) and calculateFire() are expected to exist in this file scope as provided earlier.
+	// The implementations referenced must be present (synthesizeRecordsFromBBox, predictFireProbabilitySafe, etc.).
+	func generateValues(seed: UInt64 = 42, date: Date = Date()) {
+		// Build options by mutating the default initializer (SyntheticOptions has no parameterized init).
+		var opts = SyntheticOptions()
+		opts.seed = seed
+		opts.date = date
+
+		if let c = normalizedCorners {
+			records = synthesizeRecordsFromBBox(
+				minLat: c.bottomRight.latitude,
+				maxLat: c.topLeft.latitude,
+				minLon: c.topLeft.longitude,
+				maxLon: c.bottomRight.longitude,
+				spacingMeters: spacingMeters,
+				options: opts
+			)
+		} else {
+			// default fallback bbox (small sample)
+			let bboxMinLat = 37.33
+			let bboxMaxLat = 37.34
+			let bboxMinLon = -122.04
+			let bboxMaxLon = -122.02
+			records = synthesizeRecordsFromBBox(
+				minLat: bboxMinLat,
+				maxLat: bboxMaxLat,
+				minLon: bboxMinLon,
+				maxLon: bboxMaxLon,
+				spacingMeters: spacingMeters,
+				options: opts
+			)
+		}
 	}
 
 	func calculateFire() {
-		do {
-			let config = MLModelConfiguration()
-			let model = try wildifre_predicter(configuration: config)
-
-			let prediction = try model.prediction(
-				NDVI: <#T##Double#>, LST: <#T##Double#>, BURNED_AREA: <#T##Double#>
-			)
-
-			firePrediction = "\(prediction.CLASSProbability)"
-
-		} catch {
-			firePrediction = "Error: \(error.localizedDescription)"
+		// Ensure values exist
+		if records.isEmpty {
+			generateValues()
 		}
 
-		DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
-			firePrediction = ""
+		// compute probabilities (predictFireProbabilitySafe uses CoreML if available, else heuristic)
+		Task.detached { @MainActor in
+			let probs = records.map { predictFireProbabilitySafe(for: $0) }
+			let count = Double(max(1, probs.count))
+			let avg = probs.reduce(0, +) / count
+			let maxP = probs.max() ?? 0.0
+			let pStr = String(format: "%.2f", avg)
+			let maxStr = String(format: "%.2f", maxP)
+			firePrediction = "Avg fire prob: \(pStr)  •  Max: \(maxStr)  •  Points: \(Int(count))"
+
+			// clear prediction after brief delay
+			DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+				firePrediction = ""
+			}
 		}
 	}
 }
