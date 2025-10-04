@@ -5,6 +5,7 @@
 //  Created by Adon Omeri on 30/9/2025.
 //
 
+import CoreML
 import MapKit
 import SwiftUI
 
@@ -57,6 +58,8 @@ struct ContentView: View {
 			bottomRight: CLLocationCoordinate2D(latitude: bottom, longitude: right)
 		)
 	}
+
+	@State var firePrediction: String = "Unknown"
 
 	var body: some View {
 		Group {
@@ -148,7 +151,6 @@ struct ContentView: View {
 							.annotationTitles(.hidden)
 						}
 					}
-
 				}
 				.onTapGesture(coordinateSpace: .local) { location in
 					if addPins, let coordinate = proxy.convert(
@@ -207,32 +209,64 @@ struct ContentView: View {
 				#endif
 			}
 		}
+		.onChange(
+			of: CornerPair(
+				topLeft: selectedCorners.topLeft,
+				bottomRight: selectedCorners.bottomRight
+			)
+		) {
+			firePrediction = ""
+		}
 	}
 
 	var sideView: some View {
 		Group {
-			if selectedCorners.topLeft == nil {
-				Label("Tap corner of the rectangle",
-				      systemImage: "circle.grid.cross.left.filled")
-					.transition(.blurReplace)
+			if firePrediction == "" {
+				if selectedCorners.topLeft == nil {
+					Label("Tap corner of the rectangle",
+					      systemImage: "circle.grid.cross.left.filled")
+						.transition(.blurReplace)
 
-			} else if selectedCorners.bottomRight == nil {
-				Label("Tap opposite corner of the rectangle",
-				      systemImage: "circle.grid.cross.right.filled")
-					.transition(.blurReplace)
+				} else if selectedCorners.bottomRight == nil {
+					Label("Tap opposite corner of the rectangle",
+					      systemImage: "circle.grid.cross.right.filled")
+						.transition(.blurReplace)
 
+				} else {
+					Label(
+						"Rectangle defined, you can adjust by tapping again",
+						systemImage: "checkmark.circle"
+					)
+					.transition(.blurReplace)
+				}
 			} else {
-				Label(
-					"Rectangle defined, you can adjust by tapping again",
-					systemImage: "checkmark.circle"
-				)
-				.transition(.blurReplace)
+				Text(firePrediction)
 			}
 		}
 		.animation(
 			.easeInOut,
 			value: CornerPair(topLeft: selectedCorners.topLeft, bottomRight: selectedCorners.bottomRight)
 		)
+	}
+
+	func calculateFire() {
+		do {
+			let config = MLModelConfiguration()
+			let model = try wildifre_predicter(configuration: config)
+
+			let prediction = try model.prediction(
+				NDVI: <#T##Double#>, LST: <#T##Double#>, BURNED_AREA: <#T##Double#>
+			)
+
+			firePrediction = "\(prediction.CLASSProbability)"
+
+		} catch {
+			firePrediction = "Error: \(error.localizedDescription)"
+		}
+
+		DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+			firePrediction = ""
+		}
 	}
 }
 
