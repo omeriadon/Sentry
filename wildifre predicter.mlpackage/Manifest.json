@@ -1,0 +1,24 @@
+{
+    "fileFormatVersion": "1.0.0",
+    "itemInfoEntries": {
+        "1FFF56B9-8095-4B2B-8BB0-EF973BC0729C": {
+            "author": "com.apple.CoreML",
+            "description": "External Metadata Overlay",
+            "name": "Metadata.json",
+            "path": "com.apple.CoreML/Metadata.json"
+        },
+        "2712F0BB-C93D-4F3F-83EA-D3BDB5871C19": {
+            "author": "com.apple.CoreML",
+            "description": "External FeatureDescription Overlay",
+            "name": "FeatureDescriptions.json",
+            "path": "com.apple.CoreML/FeatureDescriptions.json"
+        },
+        "AF6EFA93-566A-49D3-9107-528CF527D655": {
+            "author": "com.apple.CoreML",
+            "description": "CoreML Model Specification",
+            "name": "wildifre predicter.mlmodel",
+            "path": "com.apple.CoreML/wildifre predicter.mlmodel"
+        }
+    },
+    "rootModelIdentifier": "AF6EFA93-566A-49D3-9107-528CF527D655"
+}

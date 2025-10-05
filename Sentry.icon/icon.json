@@ -1,0 +1,107 @@
+{
+  "fill" : {
+    "automatic-gradient" : "srgb:1.00000,0.57637,0.00000,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "fill" : {
+            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
+          },
+          "hidden" : false,
+          "image-name" : "ok2.png",
+          "name" : "ok2",
+          "position" : {
+            "scale" : 0.08,
+            "translation-in-points" : [
+              -24.498707494131537,
+              17.5
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
+          },
+          "image-name" : "ok2.png",
+          "name" : "ok2",
+          "position" : {
+            "scale" : 0.12,
+            "translation-in-points" : [
+              -9,
+              2.760517083559682
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
+          },
+          "image-name" : "satellite 2.svg",
+          "name" : "satellite 2",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              45.52126275456868,
+              -53.16666666666666
+            ]
+          }
+        }
+      ],
+      "name" : "Satellite",
+      "position" : {
+        "scale" : 3,
+        "translation-in-points" : [
+          0,
+          0
+        ]
+      },
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    },
+    {
+      "layers" : [
+        {
+          "fill" : {
+            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
+          },
+          "image-name" : "flame.svg",
+          "name" : "flame",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -48.592187499999994,
+              30.000000000000014
+            ]
+          }
+        }
+      ],
+      "name" : "Fire",
+      "position" : {
+        "scale" : 5,
+        "translation-in-points" : [
+          0,
+          0
+        ]
+      },
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : "shared"
+  }
+}
